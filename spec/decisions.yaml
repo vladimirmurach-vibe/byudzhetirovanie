@@ -1,97 +1,90 @@
 decisions:
   - id: DEC-001
-    title: Выбор табличного компонента для ввода бюджета
+    title: Выбор табличного компонента для ввода данных
     status: accepted
     date: "2026-07-10"
     context: >
-      REQ-004 требует интерактивную таблицу с группировкой, агрегацией
-      и inline-редактированием плановых сумм.
+      REQ-004 требует ввод и корректировку данных по формам методологии
+      в интерактивной таблице с группировкой по объектам и периодам.
     alternatives:
       - id: mod-pivot-tabulator
-        pros:
-          - MIT-лицензия, бесплатно
-          - Статус production
-          - Виртуализация для больших объёмов
-        cons:
-          - Нет готового drag-and-drop для настройки pivot
+        pros: [MIT-лицензия, production, виртуализация, экспорт Excel]
+        cons: [Нет drag-and-drop настройки pivot]
       - id: mod-pivot-ag-grid-react
-        pros:
-          - Мощный pivot-режим и иерархии
-          - Статус production
-        cons:
-          - Enterprise-функции требуют платной лицензии
-          - Привязка к React-экосистеме Ag-Grid
+        pros: [Мощные иерархии, production]
+        cons: [Enterprise-функции платные]
       - id: mod-pivot-handsontable
-        pros:
-          - Excel-подобный интерфейс
-        cons:
-          - Статус beta
-          - Ограниченная производительность при >50k записей
+        pros: [Excel-подобный интерфейс]
+        cons: [beta, ограничения при >50k записей]
     decision: mod-pivot-tabulator
     rationale: >
-      Tabulator выбран как основной компонент: бесплатная MIT-лицензия,
-      статус production и достаточная функциональность для ввода бюджета.
-      Ag-Grid остаётся альтернативой при необходимости Enterprise-функций.
+      Tabulator — бесплатный (MIT), production-ready, поддерживает
+      группировку, редактирование и экспорт в Excel.
 
   - id: DEC-002
-    title: Адаптация модуля forecast-aggregation для бюджета
+    title: Переиспользование модулей прогнозирования для бюджетирования
     status: accepted
     date: "2026-07-10"
     context: >
-      В реестре нет специализированного модуля агрегации бюджета;
-      forecast-aggregation предоставляет аналогичную логику группировки
-      и суммирования по иерархиям.
+      В реестре нет специализированных модулей расчёта бюджета
+      строительных объектов; модули прогнозирования покрывают
+      агрегацию, корректировки и пересчёт.
     alternatives:
-      - id: forecast-aggregation
-        pros:
-          - Готовый AggregationService
-          - Проверенная производительность
-          - Зависимость от postgres-storage уже учтена
-        cons:
-          - Терминология прогнозирования требует адаптации
-      - id: custom-aggregation
-        pros:
-          - Полный контроль над доменной моделью
-        cons:
-          - Дополнительное время разработки
-          - Нет готового шаблона в реестре
-    decision: forecast-aggregation
+      - id: forecast-modules-bundle
+        modules: [consensus-calculator, adjustment-disaggregation, forecast-aggregation]
+        pros: [Готовые сервисы, проверенная производительность]
+        cons: [Требуется адаптация терминологии и измерений]
+      - id: custom-calculation
+        pros: [Полный контроль]
+        cons: [Длительная разработка, нет шаблона в реестре]
+    decision: forecast-modules-bundle
     rationale: >
-      Переиспользование forecast-aggregation с адаптацией измерений
-      и мер сокращает время разработки при сохранении требований
-      к производительности.
+      Адаптация consensus-calculator (base+adjustment), adjustment-disaggregation
+      (распределение корректировок) и forecast-aggregation (консолидация)
+      сокращает время разработки.
 
   - id: DEC-003
-    title: Выбор библиотеки визуализации
+    title: Загрузка факта из учётных систем
     status: accepted
     date: "2026-07-10"
-    context: REQ-007 требует графики план/факт на дашборде.
+    context: REQ-009 требует автоматическую загрузку фактических данных.
     alternatives:
-      - id: mod-chart-echarts
-        pros:
-          - Apache-2.0 лицензия
-          - Широкий набор типов графиков
-          - Статус production
-        cons:
-          - Размер бандла ~800KB
-      - id: mod-chart-chartjs
-        pros:
-          - Лёгковеснее
-        cons:
-          - Менее гибкие иерархические визуализации
-    decision: mod-chart-echarts
+      - id: csv-data-source
+        pros: [Готовый коннектор, production]
+        cons: [Файловый обмен, не real-time API]
+      - id: custom-api-connector
+        pros: [Прямая интеграция]
+        cons: [Нет модуля в реестре, зависит от системы заказчика]
+    decision: csv-data-source
     rationale: >
-      ECharts обеспечивает столбчатые графики план/факт и drill-down
-      при бесплатной Apache-2.0 лицензии.
+      На первом этапе — файловый обмен через csv-data-source.
+      Прямое API — после уточнения GAP-002.
 
   - id: DEC-004
-    title: Отложение workflow согласования
+    title: Генерация PDF-отчётов
+    status: accepted
+    date: "2026-07-10"
+    context: REQ-010 требует PDF и Excel; в реестре нет PDF-модуля.
+    alternatives:
+      - id: custom-pdf-service
+        pros: [Полный контроль над макетом]
+        cons: [Кастомная разработка]
+      - id: excel-only
+        pros: [Покрывается Tabulator export]
+        cons: [Не соответствует требованию заказчика]
+    decision: custom-pdf-service
+    rationale: >
+      Excel — через mod-pivot-tabulator; PDF — кастомный сервис
+      (WeasyPrint/ReportLab). Зафиксировано в GAP-003.
+
+  - id: DEC-005
+    title: Отложение прямой интеграции с 1С/SAP
     status: accepted
     date: "2026-07-10"
     context: >
-      Постановка не описывает процесс согласования; в реестре нет
-      готового модуля workflow.
+      Заказчик требует автоматическую загрузку факта, но конкретные
+      системы не определены (GAP-002).
     decision: defer
     rationale: >
-      В MVP статус бюджета меняется вручную бюджетным менеджером.
-      Полноценный workflow (REQ-010) перенесён в low priority.
+      MVP — файловый обмен; прямая интеграция после уточнения
+      учётных систем заказчика.

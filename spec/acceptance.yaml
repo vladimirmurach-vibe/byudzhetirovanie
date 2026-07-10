@@ -8,172 +8,287 @@ tests:
         method: POST
         endpoint: /api/auth/login
         body:
-          email: budget.manager@example.com
+          email: analyst@example.com
           password: valid_password
         expect:
           status: 200
           body_contains: [access_token]
       - action: request
         method: GET
-        endpoint: /api/budgets
+        endpoint: /api/scenarios
         headers: {}
         expect:
           status: 401
-      - action: request
-        method: GET
-        endpoint: /api/budgets
-        headers:
-          Authorization: "Bearer {{access_token}}"
-        expect:
-          status: 200
 
   - id: ACC-REQ-002
     requirement_id: REQ-002
-    title: Управление версиями бюджета
+    title: Хранение всех версий расчёта
     type: api
     setup:
-      auth: budget_manager
+      auth: budget_analyst
     steps:
       - action: request
         method: POST
-        endpoint: /api/budgets
+        endpoint: /api/scenarios
         body:
           name: "Бюджет 2026 v1"
-          year: 2026
-          status: draft
+          type: budget
+          scope: all_objects
         expect:
           status: 201
-          body_contains: [id, name, year, status]
+          body_contains: [id, version_number]
+      - action: request
+        method: POST
+        endpoint: /api/scenarios/{{scenario_id}}/recalculate
+        expect:
+          status: 200
+      - action: request
+        method: POST
+        endpoint: /api/scenarios
+        body:
+          name: "Бюджет 2026 v2"
+          type: budget
+          scope: all_objects
+          parent_version_id: "{{scenario_id}}"
+        expect:
+          status: 201
+          body:
+            version_number: 2
       - action: request
         method: GET
-        endpoint: /api/budgets?year=2026&status=draft
+        endpoint: /api/scenarios?include_archived=true
         expect:
           status: 200
-          body_min_count: 1
-      - action: request
-        method: PATCH
-        endpoint: /api/budgets/{{budget_id}}
-        body:
-          status: archived
-        expect:
-          status: 200
-          body:
-            status: archived
+          body_min_count: 2
 
   - id: ACC-REQ-003
     requirement_id: REQ-003
-    title: Ведение справочников
+    title: Создание сценариев бюджета/прогноза
     type: api
     setup:
-      auth: budget_manager
+      auth: budget_analyst
+      seed: construction_objects
     steps:
       - action: request
         method: POST
-        endpoint: /api/departments
+        endpoint: /api/scenarios
         body:
-          name: "Отдел продаж"
-          code: "SALES"
+          name: "Прогноз — все объекты"
+          type: forecast
+          scope: all_objects
         expect:
           status: 201
+          body:
+            type: forecast
+            scope: all_objects
+            status: draft
       - action: request
         method: POST
-        endpoint: /api/departments
+        endpoint: /api/scenarios
         body:
-          name: "Региональный отдел"
-          code: "SALES-REG"
-          parent_id: "{{department_id}}"
+          name: "Бюджет — объект А"
+          type: budget
+          scope: single_object
+          construction_object_id: "{{object_a_id}}"
         expect:
           status: 201
-          body_contains: [parent_id]
+          body:
+            scope: single_object
       - action: request
         method: POST
-        endpoint: /api/departments
+        endpoint: /api/scenarios
         body:
-          name: "Дубликат"
-          code: "SALES"
+          name: "Без объекта"
+          type: budget
+          scope: single_object
         expect:
-          status: 409
+          status: 422
 
   - id: ACC-REQ-004
     requirement_id: REQ-004
-    title: Ввод плановых сумм в таблице
+    title: Ввод и корректировка данных по формам
     type: e2e
     setup:
-      auth: department_head
-      seed: budget_with_lines
+      auth: budget_analyst
+      seed: scenario_with_cashflows
     steps:
       - action: navigate
-        url: /budgets/{{budget_id}}/grid
-      - action: assert_visible
-        selector: "[data-testid=budget-pivot-table]"
+        url: /scenarios/{{scenario_id}}/grid
       - action: edit_cell
-        row: "Отдел продаж / ЦЗ-01 / Зарплата"
-        column: "2026-01"
-        value: "150000.00"
+        row: "Объект А / Форма-01 / Материалы"
+        column: "2026-03"
+        field: adjustment
+        value: "50000.00"
       - action: click
         selector: "[data-testid=save-button]"
       - action: assert_api
         method: GET
-        endpoint: /api/budget-lines?budget_id={{budget_id}}
+        endpoint: /api/cash-flow-lines?scenario_id={{scenario_id}}
         expect:
           body_contains:
-            planned_amount: 150000.00
+            consensus_amount: "{{base_amount + 50000}}"
       - action: assert_css
         selector: "[data-modified=true]"
         count_min: 1
 
   - id: ACC-REQ-005
     requirement_id: REQ-005
-    title: Агрегация бюджета по иерархиям
+    title: Расчёт денежных потоков и финансового результата
     type: api
     setup:
-      auth: finance_director
-      seed: budget_100k_lines
+      auth: budget_analyst
+      seed: scenario_with_cashflows
     steps:
       - action: request
         method: POST
-        endpoint: /api/budget-lines/aggregate
-        body:
-          budget_id: "{{budget_id}}"
-          row_levels: [department_id, category_id]
-          column_levels: [period]
-          measure: planned_amount
-          filters:
-            period_from: "2026-01"
-            period_to: "2026-12"
+        endpoint: /api/scenarios/{{scenario_id}}/recalculate
         expect:
           status: 200
-          body_contains: [rows, totals]
-          response_time_ms_max: 3000
+      - action: request
+        method: GET
+        endpoint: /api/financial-results?scenario_id={{scenario_id}}&construction_object_id={{object_a_id}}
+        expect:
+          status: 200
+          body_contains: [revenue, costs, profit]
+      - action: assert
+        rule: profit_equals_revenue_minus_costs
 
   - id: ACC-REQ-006
     requirement_id: REQ-006
-    title: Постоянное хранение данных
-    type: integration
+    title: Быстрый пересчёт сценария
+    type: performance
+    setup:
+      auth: budget_analyst
+      seed: full_portfolio_scenario
     steps:
       - action: request
         method: POST
-        endpoint: /api/budgets
-        body:
-          name: "Persistence test"
-          year: 2026
+        endpoint: /api/scenarios/{{scenario_id}}/recalculate
         expect:
-          status: 201
-      - action: restart_service
-        service: backend
+          status: 200
+          response_time_ms_max: 1200000
       - action: request
         method: GET
-        endpoint: /api/budgets?name=Persistence%20test
+        endpoint: /api/scenarios/{{scenario_id}}
+        expect:
+          body:
+            status: calculated
+          body_contains: [calculated_at]
+
+  - id: ACC-REQ-007
+    requirement_id: REQ-007
+    title: Консолидация по всем объектам
+    type: api
+    setup:
+      auth: budget_analyst
+      seed: multi_object_calculated_scenario
+    steps:
+      - action: request
+        method: GET
+        endpoint: /api/financial-results/consolidated?scenario_id={{scenario_id}}
         expect:
           status: 200
+          body_contains: [is_consolidated, profit, period]
+      - action: assert
+        rule: consolidated_profit_equals_sum_of_objects
+      - action: assert
+        rule: horizon_covers_all_construction_periods
+
+  - id: ACC-REQ-008
+    requirement_id: REQ-008
+    title: Сравнение версий сценариев
+    type: api
+    setup:
+      auth: budget_analyst
+      seed: two_scenario_versions
+    steps:
+      - action: request
+        method: GET
+        endpoint: /api/scenarios/compare?version_a={{v1_id}}&version_b={{v2_id}}
+        expect:
+          status: 200
+          response_time_ms_max: 5000
+          body_contains: [variance, variance_percent]
+
+  - id: ACC-REQ-009
+    requirement_id: REQ-009
+    title: Автоматическая загрузка фактических данных
+    type: integration
+    setup:
+      auth: admin
+      seed: fact_file_ready
+    steps:
+      - action: request
+        method: POST
+        endpoint: /api/fact-loading/trigger
+        expect:
+          status: 200
+          body_contains: [records_loaded]
+      - action: request
+        method: GET
+        endpoint: /api/cash-flow-lines?source=accounting_system
+        expect:
           body_min_count: 1
       - action: request
-        method: PUT
-        endpoint: /api/budget-lines/bulk
-        body:
-          lines: "{{test_lines_100}}"
+        method: GET
+        endpoint: /api/fact-loading/log
         expect:
-          status: 200
-      - action: assert_database
-        query: "SELECT COUNT(*) FROM budget_lines WHERE budget_id = :id"
-        expect_count: 100
+          body_contains: [status, timestamp]
+
+  - id: ACC-REQ-010
+    requirement_id: REQ-010
+    title: Формирование отчётов PDF и Excel
+    type: api
+    setup:
+      auth: budget_analyst
+      seed: calculated_scenario
+    steps:
+      - action: request
+        method: POST
+        endpoint: /api/reports/generate
+        body:
+          scenario_id: "{{scenario_id}}"
+          type: consolidated
+          format: excel
+        expect:
+          status: 201
+          body_contains: [file_path]
+      - action: request
+        method: POST
+        endpoint: /api/reports/generate
+        body:
+          scenario_id: "{{scenario_id}}"
+          type: consolidated
+          format: pdf
+        expect:
+          status: 201
+          body_contains: [file_path]
+
+  - id: ACC-REQ-011
+    requirement_id: REQ-011
+    title: Справочник строительных объектов
+    type: api
+    setup:
+      auth: budget_analyst
+    steps:
+      - action: request
+        method: POST
+        endpoint: /api/construction-objects
+        body:
+          name: "ЖК Северный"
+          code: "OBJ-001"
+          construction_start: "2025-01-01"
+          construction_end: "2027-06-30"
+          status: in_progress
+        expect:
+          status: 201
+      - action: request
+        method: POST
+        endpoint: /api/construction-objects
+        body:
+          name: "Некорректный"
+          code: "OBJ-002"
+          construction_start: "2027-01-01"
+          construction_end: "2025-01-01"
+        expect:
+          status: 422

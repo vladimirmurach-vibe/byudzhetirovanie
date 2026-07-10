@@ -15,7 +15,7 @@ modules:
     registry_path: templates/fastapi-crud-generator
     version: "1.0.0"
     maturity: production
-    used_by_requirements: [REQ-002, REQ-003]
+    used_by_requirements: [REQ-002, REQ-003, REQ-011]
 
   - id: postgres-storage
     name: Хранилище PostgreSQL
@@ -23,7 +23,7 @@ modules:
     registry_path: connectors/postgres-storage
     version: "1.0.0"
     maturity: production
-    used_by_requirements: [REQ-006]
+    used_by_requirements: [REQ-002]
 
   - id: auth-jwt
     name: JWT аутентификация
@@ -39,7 +39,7 @@ modules:
     registry_path: templates/react-dashboard-template
     version: "1.0.0"
     maturity: production
-    used_by_requirements: [REQ-007]
+    used_by_requirements: []
 
   - id: react-crud-pages
     name: Шаблон CRUD-страниц
@@ -47,7 +47,7 @@ modules:
     registry_path: templates/react-crud-pages
     version: "1.0.0"
     maturity: production
-    used_by_requirements: [REQ-002, REQ-003]
+    used_by_requirements: [REQ-003, REQ-011]
 
   - id: mod-pivot-tabulator
     name: Tabulator with Pivot Module
@@ -56,16 +56,7 @@ modules:
     version: "1.0.0"
     maturity: production
     license: MIT
-    used_by_requirements: [REQ-004]
-
-  - id: forecast-aggregation
-    name: Агрегатор прогнозов по иерархиям
-    type: template
-    registry_path: templates/forecast-aggregation
-    version: "1.0.0"
-    maturity: production
-    used_by_requirements: [REQ-005]
-    note: Адаптируется для агрегации бюджетных строк вместо прогнозов
+    used_by_requirements: [REQ-004, REQ-008, REQ-010]
 
   - id: mod-chart-echarts
     name: Apache ECharts
@@ -74,7 +65,42 @@ modules:
     version: "1.0.0"
     maturity: production
     license: Apache-2.0
-    used_by_requirements: [REQ-007]
+    used_by_requirements: [REQ-008]
+
+  - id: forecast-aggregation
+    name: Агрегатор прогнозов по иерархиям
+    type: template
+    registry_path: templates/forecast-aggregation
+    version: "1.0.0"
+    maturity: production
+    used_by_requirements: [REQ-006, REQ-007]
+    note: Адаптируется для консолидации финансового результата по объектам
+
+  - id: consensus-calculator
+    name: Калькулятор консенсус-прогноза
+    type: template
+    registry_path: templates/consensus-calculator
+    version: "1.0.0"
+    maturity: production
+    used_by_requirements: [REQ-004, REQ-005, REQ-006]
+    note: Адаптируется для расчёта consensus_amount = base_amount + adjustment
+
+  - id: adjustment-disaggregation
+    name: Дезагрегатор корректировок
+    type: template
+    registry_path: templates/adjustment-disaggregation
+    version: "1.0.0"
+    maturity: production
+    used_by_requirements: [REQ-004]
+    note: Распределение корректировок с агрегированного уровня на детальные строки
+
+  - id: csv-data-source
+    name: Коннектор для CSV
+    type: connector
+    registry_path: connectors/csv-data-source
+    version: "1.0.0"
+    maturity: production
+    used_by_requirements: [REQ-009, REQ-012]
 
   - id: clean-architecture-pattern
     name: Чистая архитектура
@@ -90,4 +116,4 @@ modules:
     registry_path: policies/basic-security-policy
     version: "1.0.0"
     maturity: production
-    used_by_requirements: [REQ-001, REQ-008]
+    used_by_requirements: [REQ-001, REQ-014]
