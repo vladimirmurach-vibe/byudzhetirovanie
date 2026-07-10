@@ -36,3 +36,24 @@ entries:
       - GAP-004
       - GAP-005
       - GAP-006
+
+  - version: "0.2.1"
+    status: draft
+    date: "2026-07-10"
+    author: AI-архитектор
+    summary: >
+      Заказчик не может ответить на открытые вопросы. Gaps переведены
+      в статус deferred; разработка MVP разрешена на основе допущений.
+    changes:
+      - Все customer gaps помечены customer_input: unavailable
+      - Добавлены допущения ASM-009..ASM-011
+      - Сняты блокировки blocks с требований
+      - Добавлен флаг proceed_without_resolution в gaps.yaml
+    open_gaps:
+      - GAP-003
+    deferred_gaps:
+      - GAP-001
+      - GAP-002
+      - GAP-004
+      - GAP-005
+      - GAP-006
