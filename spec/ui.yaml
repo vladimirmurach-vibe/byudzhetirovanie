@@ -1,0 +1,160 @@
+application:
+  id: ui-budgeting-app
+  name: Бюджетирование
+  shell_module: react-dashboard-template
+  language: ru
+  theme: light
+
+navigation:
+  - id: nav-dashboard
+    label: Дашборд
+    route: /dashboard
+    icon: chart-bar
+    roles: [finance_director, budget_manager]
+    screen_ref: screen-dashboard
+
+  - id: nav-budgets
+    label: Бюджеты
+    route: /budgets
+    icon: document
+    roles: [finance_director, budget_manager, department_head]
+    screen_ref: screen-budget-list
+
+  - id: nav-budget-grid
+    label: Ввод бюджета
+    route: /budgets/:budgetId/grid
+    icon: table
+    roles: [budget_manager, department_head]
+    screen_ref: screen-budget-grid
+    hidden_in_menu: true
+
+  - id: nav-directories
+    label: Справочники
+    route: /directories
+    icon: folder
+    roles: [admin, budget_manager]
+    children:
+      - id: nav-departments
+        label: Подразделения
+        route: /directories/departments
+        screen_ref: screen-departments
+      - id: nav-cost-centers
+        label: Центры затрат
+        route: /directories/cost-centers
+        screen_ref: screen-cost-centers
+      - id: nav-categories
+        label: Статьи бюджета
+        route: /directories/categories
+        screen_ref: screen-categories
+
+  - id: nav-users
+    label: Пользователи
+    route: /admin/users
+    icon: users
+    roles: [admin]
+    screen_ref: screen-users
+
+  - id: nav-login
+    label: Вход
+    route: /login
+    icon: lock
+    public: true
+    screen_ref: screen-login
+
+screens:
+  - id: screen-login
+    name: Страница входа
+    route: /login
+    components:
+      - id: comp-login-form
+        type: form
+        fields:
+          - email
+          - password
+        actions:
+          - submit: authenticate
+
+  - id: screen-dashboard
+    name: Дашборд план/факт
+    route: /dashboard
+    layout: dashboard
+    components:
+      - id: comp-period-filter
+        type: filter
+        fields: [year, period_from, period_to, department_id, category_id]
+      - id: comp-plan-fact-chart
+        type: chart
+        module_ref: mod-chart-echarts
+        chart_type: bar
+        data_source: /api/budget-lines/aggregate
+      - id: comp-summary-cards
+        type: summary
+        metrics: [total_planned, total_actual, variance_percent]
+
+  - id: screen-budget-list
+    name: Список бюджетов
+    route: /budgets
+    components:
+      - id: comp-budget-table
+        type: crud-table
+        module_ref: react-crud-pages
+        entity_ref: entity-budget
+        actions: [create, edit, archive, open_grid]
+      - id: comp-budget-filters
+        type: filter
+        fields: [year, status]
+
+  - id: screen-budget-grid
+    name: Таблица ввода бюджета
+    route: /budgets/:budgetId/grid
+    components:
+      - id: comp-budget-pivot
+        type: pivot-table
+        module_ref: mod-pivot-tabulator
+        entity_ref: entity-budget-line
+        dimensions:
+          rows: [department_name, cost_center_name, category_name]
+          columns: [period]
+        measures: [planned_amount, actual_amount]
+        editable_fields: [planned_amount]
+      - id: comp-grid-toolbar
+        type: toolbar
+        actions: [save, refresh, export]
+
+  - id: screen-departments
+    name: Справочник подразделений
+    route: /directories/departments
+    components:
+      - id: comp-departments-crud
+        type: crud-table
+        module_ref: react-crud-pages
+        entity_ref: entity-department
+        features: [hierarchy]
+
+  - id: screen-cost-centers
+    name: Справочник центров затрат
+    route: /directories/cost-centers
+    components:
+      - id: comp-cost-centers-crud
+        type: crud-table
+        module_ref: react-crud-pages
+        entity_ref: entity-cost-center
+
+  - id: screen-categories
+    name: Справочник статей бюджета
+    route: /directories/categories
+    components:
+      - id: comp-categories-crud
+        type: crud-table
+        module_ref: react-crud-pages
+        entity_ref: entity-budget-category
+        features: [hierarchy]
+
+  - id: screen-users
+    name: Управление пользователями
+    route: /admin/users
+    components:
+      - id: comp-users-crud
+        type: crud-table
+        module_ref: react-crud-pages
+        entity_ref: entity-user

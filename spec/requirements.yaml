@@ -1,0 +1,159 @@
+requirements:
+  - id: REQ-001
+    title: Аутентификация пользователей
+    description: >
+      Система должна обеспечивать вход пользователей по email и паролю
+      с выдачей JWT-токена для доступа к API.
+    entity_refs:
+      - entity-user
+    priority: high
+    acceptance_criteria:
+      - Пользователь с валидными учётными данными получает JWT-токен
+      - Запросы к защищённым эндпоинтам без токена возвращают 401
+      - Истёкший токен отклоняется с кодом 401
+    module_candidates:
+      - id: auth-jwt
+        registry_path: black_boxes/auth-jwt
+        rationale: Готовый модуль JWT-аутентификации с login, refresh и verify.
+
+  - id: REQ-002
+    title: Управление версиями бюджета
+    description: >
+      Бюджетный менеджер может создавать, просматривать, редактировать
+      и архивировать версии бюджета на финансовый год.
+    entity_refs:
+      - entity-budget
+    priority: high
+    acceptance_criteria:
+      - Создание бюджета с названием и годом в статусе draft
+      - Список бюджетов с фильтрацией по году и статусу
+      - Перевод бюджета в статус archived
+    module_candidates:
+      - id: fastapi-crud-generator
+        registry_path: templates/fastapi-crud-generator
+        rationale: Автоматическая генерация CRUD API для сущности «Бюджет».
+      - id: react-crud-pages
+        registry_path: templates/react-crud-pages
+        rationale: Готовые CRUD-страницы для управления версиями бюджета.
+
+  - id: REQ-003
+    title: Ведение справочников
+    description: >
+      Администратор и бюджетный менеджер могут управлять справочниками
+      подразделений, центров затрат и статей бюджета с поддержкой иерархии.
+    entity_refs:
+      - entity-department
+      - entity-cost-center
+      - entity-budget-category
+    priority: high
+    acceptance_criteria:
+      - CRUD-операции для каждого справочника
+      - Создание дочерних записей с указанием parent_id
+      - Валидация уникальности кода в пределах справочника
+    module_candidates:
+      - id: fastapi-crud-generator
+        registry_path: templates/fastapi-crud-generator
+        rationale: Единый подход к генерации CRUD для всех справочников.
+      - id: react-crud-pages
+        registry_path: templates/react-crud-pages
+        rationale: UI-страницы для редактирования справочников.
+
+  - id: REQ-004
+    title: Ввод плановых сумм в таблице
+    description: >
+      Руководитель подразделения может вводить и редактировать плановые суммы
+      по статьям, центрам затрат и месяцам в интерактивной таблице.
+    entity_refs:
+      - entity-budget-line
+    priority: high
+    acceptance_criteria:
+      - Отображение строк бюджета в табличной форме с группировкой
+      - Inline-редактирование ячеек planned_amount с валидацией числа
+      - Сохранение изменений в базу данных
+      - Визуальная индикация изменённых ячеек
+    module_candidates:
+      - id: mod-pivot-tabulator
+        registry_path: source_code/mod-pivot-tabulator
+        rationale: MIT-лицензия, группировка, агрегация и редактирование ячеек.
+
+  - id: REQ-005
+    title: Агрегация бюджета по иерархиям
+    description: >
+      Система должна агрегировать плановые суммы по иерархиям подразделений,
+      статей бюджета и периодов с возможностью drill-down.
+    entity_refs:
+      - entity-budget-line
+      - entity-department
+      - entity-budget-category
+    priority: high
+    acceptance_criteria:
+      - Суммирование planned_amount по выбранным уровням иерархии
+      - Фильтрация по подразделению, статье и периоду
+      - Время ответа API агрегации не более 3 секунд при 100 000 строк
+    module_candidates:
+      - id: forecast-aggregation
+        registry_path: templates/forecast-aggregation
+        rationale: Готовый сервис динамической агрегации по иерархиям измерений.
+
+  - id: REQ-006
+    title: Постоянное хранение данных
+    description: >
+      Все данные бюджета, справочники и пользователи хранятся
+      в реляционной СУБД с поддержкой миграций.
+    entity_refs:
+      - entity-budget
+      - entity-budget-line
+      - entity-user
+    priority: high
+    acceptance_criteria:
+      - Данные сохраняются в PostgreSQL и доступны после перезапуска
+      - Схема БД управляется через миграции
+      - Транзакционная целостность при массовом обновлении строк бюджета
+    module_candidates:
+      - id: postgres-storage
+        registry_path: connectors/postgres-storage
+        rationale: Шаблон работы с PostgreSQL, SQLAlchemy и Alembic.
+
+  - id: REQ-007
+    title: Дашборд план/факт
+    description: >
+      Финансовый директор видит сводные графики сравнения плановых
+      и фактических сумм по подразделениям и статьям.
+    entity_refs:
+      - entity-budget-line
+    priority: medium
+    acceptance_criteria:
+      - Столбчатый график план vs факт по подразделениям
+      - Фильтр по периоду и статье бюджета
+      - Обновление графика при смене фильтров без перезагрузки страницы
+
+  - id: REQ-008
+    title: Разграничение доступа по ролям
+    description: >
+      Руководитель подразделения видит и редактирует только данные
+      своего подразделения; финансовый директор — все подразделения.
+    entity_refs:
+      - entity-user
+      - entity-budget-line
+    priority: medium
+    acceptance_criteria:
+      - department_head не может редактировать строки чужих подразделений
+      - finance_director имеет доступ ко всем данным на чтение
+      - admin управляет пользователями
+
+  - id: REQ-009
+    title: Экспорт бюджета в Excel/CSV
+    description: >
+      Бюджетный менеджер может выгрузить текущую версию бюджета
+      в файл Excel или CSV.
+    entity_refs:
+      - entity-budget-line
+    priority: low
+
+  - id: REQ-010
+    title: Workflow согласования бюджета
+    description: >
+      Многоэтапное согласование бюджета с маршрутом draft → in_review → approved.
+    entity_refs:
+      - entity-budget
+    priority: low

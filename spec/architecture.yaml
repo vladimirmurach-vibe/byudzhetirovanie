@@ -1,0 +1,97 @@
+pattern: clean-architecture-pattern
+pattern_registry_path: methodologies/clean-architecture-pattern
+
+layers:
+  - name: presentation
+    technology: React 18
+    modules: [react-dashboard-template, react-crud-pages, mod-pivot-tabulator, mod-chart-echarts]
+  - name: api
+    technology: FastAPI
+    modules: [fastapi-base, fastapi-crud-generator, auth-jwt]
+  - name: domain
+    description: Бизнес-логика бюджетирования, агрегация, RBAC
+    modules: [forecast-aggregation]
+  - name: infrastructure
+    technology: PostgreSQL 14+
+    modules: [postgres-storage]
+
+selected_modules:
+  - id: fastapi-base
+    role: backend-foundation
+    requirements: []
+  - id: auth-jwt
+    role: authentication
+    requirements: [REQ-001]
+  - id: postgres-storage
+    role: persistence
+    requirements: [REQ-006]
+  - id: fastapi-crud-generator
+    role: crud-api
+    requirements: [REQ-002, REQ-003]
+  - id: forecast-aggregation
+    role: budget-aggregation-service
+    requirements: [REQ-005]
+    adaptation: >
+      Переименовать меры base_forecast/adjustment/consensus_forecast
+      в planned_amount/actual_amount; адаптировать измерения под
+      department, cost_center, category, period.
+  - id: react-dashboard-template
+    role: frontend-shell
+    requirements: [REQ-007]
+  - id: react-crud-pages
+    role: crud-ui
+    requirements: [REQ-002, REQ-003]
+  - id: mod-pivot-tabulator
+    role: budget-grid
+    requirements: [REQ-004]
+  - id: mod-chart-echarts
+    role: visualization
+    requirements: [REQ-007]
+  - id: clean-architecture-pattern
+    role: architecture-guideline
+    requirements: []
+  - id: basic-security-policy
+    role: security-policy
+    requirements: [REQ-001, REQ-008]
+
+requirement_mapping:
+  - requirement_id: REQ-001
+    module_id: auth-jwt
+    component: AuthMiddleware
+  - requirement_id: REQ-002
+    module_id: fastapi-crud-generator
+    component: BudgetCRUDRouter
+    companion_module: react-crud-pages
+  - requirement_id: REQ-003
+    module_id: fastapi-crud-generator
+    component: DirectoryCRUDRouters
+    companion_module: react-crud-pages
+  - requirement_id: REQ-004
+    module_id: mod-pivot-tabulator
+    component: BudgetGridComponent
+  - requirement_id: REQ-005
+    module_id: forecast-aggregation
+    component: AggregationService
+  - requirement_id: REQ-006
+    module_id: postgres-storage
+    component: DatabaseLayer
+  - requirement_id: REQ-007
+    module_id: mod-chart-echarts
+    component: PlanFactChart
+    companion_module: react-dashboard-template
+
+deployment:
+  type: docker-compose
+  services:
+    - name: frontend
+      port: 3000
+    - name: backend
+      port: 8000
+    - name: postgres
+      port: 5432
+
+integrations:
+  external: []
+  deferred:
+    - ERP import/export
+    - SSO/LDAP authentication

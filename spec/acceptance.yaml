@@ -1,0 +1,179 @@
+tests:
+  - id: ACC-REQ-001
+    requirement_id: REQ-001
+    title: Аутентификация пользователей
+    type: api
+    steps:
+      - action: request
+        method: POST
+        endpoint: /api/auth/login
+        body:
+          email: budget.manager@example.com
+          password: valid_password
+        expect:
+          status: 200
+          body_contains: [access_token]
+      - action: request
+        method: GET
+        endpoint: /api/budgets
+        headers: {}
+        expect:
+          status: 401
+      - action: request
+        method: GET
+        endpoint: /api/budgets
+        headers:
+          Authorization: "Bearer {{access_token}}"
+        expect:
+          status: 200
+
+  - id: ACC-REQ-002
+    requirement_id: REQ-002
+    title: Управление версиями бюджета
+    type: api
+    setup:
+      auth: budget_manager
+    steps:
+      - action: request
+        method: POST
+        endpoint: /api/budgets
+        body:
+          name: "Бюджет 2026 v1"
+          year: 2026
+          status: draft
+        expect:
+          status: 201
+          body_contains: [id, name, year, status]
+      - action: request
+        method: GET
+        endpoint: /api/budgets?year=2026&status=draft
+        expect:
+          status: 200
+          body_min_count: 1
+      - action: request
+        method: PATCH
+        endpoint: /api/budgets/{{budget_id}}
+        body:
+          status: archived
+        expect:
+          status: 200
+          body:
+            status: archived
+
+  - id: ACC-REQ-003
+    requirement_id: REQ-003
+    title: Ведение справочников
+    type: api
+    setup:
+      auth: budget_manager
+    steps:
+      - action: request
+        method: POST
+        endpoint: /api/departments
+        body:
+          name: "Отдел продаж"
+          code: "SALES"
+        expect:
+          status: 201
+      - action: request
+        method: POST
+        endpoint: /api/departments
+        body:
+          name: "Региональный отдел"
+          code: "SALES-REG"
+          parent_id: "{{department_id}}"
+        expect:
+          status: 201
+          body_contains: [parent_id]
+      - action: request
+        method: POST
+        endpoint: /api/departments
+        body:
+          name: "Дубликат"
+          code: "SALES"
+        expect:
+          status: 409
+
+  - id: ACC-REQ-004
+    requirement_id: REQ-004
+    title: Ввод плановых сумм в таблице
+    type: e2e
+    setup:
+      auth: department_head
+      seed: budget_with_lines
+    steps:
+      - action: navigate
+        url: /budgets/{{budget_id}}/grid
+      - action: assert_visible
+        selector: "[data-testid=budget-pivot-table]"
+      - action: edit_cell
+        row: "Отдел продаж / ЦЗ-01 / Зарплата"
+        column: "2026-01"
+        value: "150000.00"
+      - action: click
+        selector: "[data-testid=save-button]"
+      - action: assert_api
+        method: GET
+        endpoint: /api/budget-lines?budget_id={{budget_id}}
+        expect:
+          body_contains:
+            planned_amount: 150000.00
+      - action: assert_css
+        selector: "[data-modified=true]"
+        count_min: 1
+
+  - id: ACC-REQ-005
+    requirement_id: REQ-005
+    title: Агрегация бюджета по иерархиям
+    type: api
+    setup:
+      auth: finance_director
+      seed: budget_100k_lines
+    steps:
+      - action: request
+        method: POST
+        endpoint: /api/budget-lines/aggregate
+        body:
+          budget_id: "{{budget_id}}"
+          row_levels: [department_id, category_id]
+          column_levels: [period]
+          measure: planned_amount
+          filters:
+            period_from: "2026-01"
+            period_to: "2026-12"
+        expect:
+          status: 200
+          body_contains: [rows, totals]
+          response_time_ms_max: 3000
+
+  - id: ACC-REQ-006
+    requirement_id: REQ-006
+    title: Постоянное хранение данных
+    type: integration
+    steps:
+      - action: request
+        method: POST
+        endpoint: /api/budgets
+        body:
+          name: "Persistence test"
+          year: 2026
+        expect:
+          status: 201
+      - action: restart_service
+        service: backend
+      - action: request
+        method: GET
+        endpoint: /api/budgets?name=Persistence%20test
+        expect:
+          status: 200
+          body_min_count: 1
+      - action: request
+        method: PUT
+        endpoint: /api/budget-lines/bulk
+        body:
+          lines: "{{test_lines_100}}"
+        expect:
+          status: 200
+      - action: assert_database
+        query: "SELECT COUNT(*) FROM budget_lines WHERE budget_id = :id"
+        expect_count: 100

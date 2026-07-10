@@ -1,0 +1,22 @@
+entries:
+  - version: "0.1.0"
+    status: draft
+    date: "2026-07-10"
+    author: AI-архитектор
+    summary: >
+      Первоначальная спецификация проекта «Бюджетирование».
+      Определены бизнес-цели, сущности, 10 требований (6 high, 2 medium, 2 low),
+      UI-структура, архитектура на базе module-registry и приёмочные тесты.
+    changes:
+      - Создан index.yaml с project.id = byudzhetirovanie
+      - Описаны 4 роли стейкхолдеров в business.yaml
+      - Определены 6 сущностей данных в data.yaml
+      - Сформулированы требования REQ-001..REQ-010
+      - Выбраны 11 модулей из module-registry
+      - Зафиксированы 6 gaps и 8 assumptions
+      - Приняты 4 архитектурных решения в decisions.yaml
+    open_gaps:
+      - GAP-001
+      - GAP-002
+      - GAP-003
+      - GAP-004

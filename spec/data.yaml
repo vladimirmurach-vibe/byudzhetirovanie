@@ -1,0 +1,184 @@
+entities:
+  - id: entity-budget
+    name: Бюджет
+    description: Версия бюджета компании на определённый период
+    attributes:
+      - id: budget-id
+        name: id
+        type: uuid
+        required: true
+      - id: budget-name
+        name: name
+        type: string
+        required: true
+        description: Название версии (например, «Бюджет 2026 v1»)
+      - id: budget-year
+        name: year
+        type: integer
+        required: true
+        description: Финансовый год
+      - id: budget-status
+        name: status
+        type: enum
+        values: [draft, in_review, approved, archived]
+        required: true
+      - id: budget-created-at
+        name: created_at
+        type: datetime
+        required: true
+    relationships:
+      - target: entity-budget-line
+        type: one-to-many
+        description: Бюджет содержит строки плановых сумм
+
+  - id: entity-budget-line
+    name: Строка бюджета
+    description: Плановая или фактическая сумма по статье, ЦЗ и периоду
+    attributes:
+      - id: line-id
+        name: id
+        type: uuid
+        required: true
+      - id: line-budget-id
+        name: budget_id
+        type: uuid
+        required: true
+      - id: line-department-id
+        name: department_id
+        type: uuid
+        required: true
+      - id: line-cost-center-id
+        name: cost_center_id
+        type: uuid
+        required: true
+      - id: line-category-id
+        name: category_id
+        type: uuid
+        required: true
+      - id: line-period
+        name: period
+        type: string
+        required: true
+        description: Период в формате YYYY-MM
+      - id: line-planned-amount
+        name: planned_amount
+        type: decimal
+        required: true
+        description: Плановая сумма
+      - id: line-actual-amount
+        name: actual_amount
+        type: decimal
+        required: false
+        description: Фактическая сумма (заполняется вручную в MVP)
+    relationships:
+      - target: entity-budget
+        type: many-to-one
+      - target: entity-department
+        type: many-to-one
+      - target: entity-cost-center
+        type: many-to-one
+      - target: entity-budget-category
+        type: many-to-one
+
+  - id: entity-department
+    name: Подразделение
+    description: Организационная единица компании
+    attributes:
+      - id: dept-id
+        name: id
+        type: uuid
+        required: true
+      - id: dept-name
+        name: name
+        type: string
+        required: true
+      - id: dept-code
+        name: code
+        type: string
+        required: true
+      - id: dept-parent-id
+        name: parent_id
+        type: uuid
+        required: false
+        description: Родительское подразделение для иерархии
+    relationships:
+      - target: entity-cost-center
+        type: one-to-many
+
+  - id: entity-cost-center
+    name: Центр затрат
+    description: Центр финансовой ответственности
+    attributes:
+      - id: cc-id
+        name: id
+        type: uuid
+        required: true
+      - id: cc-name
+        name: name
+        type: string
+        required: true
+      - id: cc-code
+        name: code
+        type: string
+        required: true
+      - id: cc-department-id
+        name: department_id
+        type: uuid
+        required: true
+    relationships:
+      - target: entity-department
+        type: many-to-one
+
+  - id: entity-budget-category
+    name: Статья бюджета
+    description: Классификатор статей доходов и расходов
+    attributes:
+      - id: cat-id
+        name: id
+        type: uuid
+        required: true
+      - id: cat-name
+        name: name
+        type: string
+        required: true
+      - id: cat-code
+        name: code
+        type: string
+        required: true
+      - id: cat-parent-id
+        name: parent_id
+        type: uuid
+        required: false
+        description: Родительская статья для иерархии
+      - id: cat-type
+        name: type
+        type: enum
+        values: [income, expense]
+        required: true
+
+  - id: entity-user
+    name: Пользователь
+    description: Учётная запись сотрудника
+    attributes:
+      - id: user-id
+        name: id
+        type: uuid
+        required: true
+      - id: user-email
+        name: email
+        type: string
+        required: true
+      - id: user-full-name
+        name: full_name
+        type: string
+        required: true
+      - id: user-role
+        name: role
+        type: enum
+        values: [admin, finance_director, budget_manager, department_head]
+        required: true
+      - id: user-department-id
+        name: department_id
+        type: uuid
+        required: false
+        description: Привязка руководителя подразделения к ЦФО

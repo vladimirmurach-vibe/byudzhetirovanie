@@ -1,0 +1,51 @@
+assumptions:
+  - id: ASM-001
+    description: >
+      Целевая аудитория — средняя компания (до 500 сотрудников, до 20 подразделений).
+    impact: medium
+    related_requirements: [REQ-005, REQ-004]
+
+  - id: ASM-002
+    description: >
+      Фактические суммы (actual_amount) вводятся вручную бюджетным менеджером;
+      автоматическая загрузка из бухгалтерии отложена.
+    impact: high
+    related_requirements: [REQ-007]
+
+  - id: ASM-003
+    description: >
+      Бюджет планируется с помесячной детализацией в рамках одного финансового года.
+    impact: high
+    related_requirements: [REQ-004, REQ-005]
+
+  - id: ASM-004
+    description: >
+      Валюта бюджета — рубли (RUB), конвертация не требуется.
+    impact: low
+    related_requirements: [REQ-004]
+
+  - id: ASM-005
+    description: >
+      Пользователи работают с десктопного браузера (Chrome, Edge, Firefox последних версий).
+    impact: medium
+    related_requirements: [REQ-004, REQ-007]
+
+  - id: ASM-006
+    description: >
+      Модуль forecast-aggregation адаптируется для бюджетных измерений
+      без изменения базовой логики агрегации.
+    impact: medium
+    related_requirements: [REQ-005]
+
+  - id: ASM-007
+    description: >
+      Workflow согласования (draft → in_review → approved) реализуется
+      вручную сменой статуса бюджетным менеджером в MVP.
+    impact: medium
+    related_requirements: [REQ-010]
+
+  - id: ASM-008
+    description: >
+      Один пользователь может иметь только одну роль.
+    impact: low
+    related_requirements: [REQ-008]
